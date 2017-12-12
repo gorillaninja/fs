@@ -103,6 +103,11 @@
   [path]
   (predicate exists (file path)))
 
+(defn not-exists?
+  "Return true is `path` does not exist."
+  [path]
+  (not (exists? path)))
+
 (defn absolute
   "Return absolute file."
   [path]
@@ -129,6 +134,12 @@
              trim-ext (let [dot (.lastIndexOf base ".")]
                         (if (pos? dot) (subs base 0 dot) base))
              :else base))))
+
+(defn dir-name
+  "Return the parent path as a string."
+  [path]
+  (.getParent (file path)))
+
 
 (defn directory?
   "Return true if `path` is a directory."
@@ -230,6 +241,10 @@
 
 (include-java-7-fns)
 
+(defn path-join [& elems]
+  (.getPath
+    (apply file elems)))
+
 (defn split-ext
   "Returns a vector of `[name extension]`."
   [path]
@@ -238,6 +253,15 @@
     (if (pos? i)
       [(subs base 0 i) (subs base i)]
       [base nil])))
+
+(defn adjust-ext
+  "Changes the extension of a path"
+  [path new-ext]
+  (if new-ext
+    (if (re-find #"\.\w*$" path)
+      (string/replace path #"\.\w*$" new-ext)
+      (str path new-ext))
+    path))
 
 (defn extension
   "Return the extension part of a file."
@@ -323,19 +347,21 @@
 
 (defn- temp-create
   "Create a temporary file or dir, trying n times before giving up."
-  [prefix suffix tries f]
-  (let [tmp (file (tmpdir) (temp-name prefix suffix))]
-    (when (pos? tries)
-      (if (f tmp)
-        tmp
-        (recur prefix suffix (dec tries) f)))))
+  ([prefix suffix tries f] (temp-create (tmpdir) prefix suffix tries f))
+  ([path prefix suffix tries f]
+    (let [tmp (file path (temp-name prefix suffix))]
+      (when (pos? tries)
+        (if (f tmp)
+          tmp
+          (recur path prefix suffix (dec tries) f))))))
 
 (defn temp-file
   "Create a temporary file. Returns nil if file could not be created
    even after n tries (default 10)."
-  ([prefix]              (temp-file prefix "" 10))
-  ([prefix suffix]       (temp-file prefix suffix 10))
-  ([prefix suffix tries] (temp-create prefix suffix tries create)))
+  ([prefix]                   (temp-file prefix "" 10))
+  ([prefix suffix]            (temp-file prefix suffix 10))
+  ([prefix suffix tries]      (temp-create prefix suffix tries create))
+  ([path prefix suffix tries] (temp-create path prefix suffix tries create)))
 
 (defn temp-dir
   "Create a temporary directory. Returns nil if dir could not be created
@@ -348,10 +374,12 @@
   "Create an ephemeral file (will be deleted on JVM exit).
    Returns nil if file could not be created even after n tries
   (default 10)."
-  ([prefix]              (ephemeral-file prefix "" 10))
-  ([prefix suffix]       (ephemeral-file prefix suffix 10))
-  ([prefix suffix tries] (when-let [created (temp-create prefix suffix tries create)]
-                           (doto created .deleteOnExit))))
+  ([prefix]                   (ephemeral-file prefix "" 10))
+  ([prefix suffix]            (ephemeral-file prefix suffix 10))
+  ([prefix suffix tries]      (when-let [created (temp-create prefix suffix tries create)]
+                                (doto created .deleteOnExit)))
+  ([path prefix suffix tries] (when-let [created (temp-create path prefix suffix tries create)]
+                                (doto created .deleteOnExit))))
 
 (defn ephemeral-dir
   "Create an ephemeral directory (will be deleted on JVM exit).

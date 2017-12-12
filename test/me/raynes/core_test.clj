@@ -72,6 +72,14 @@
   (exists? "ewjgnr4ig43j") => false)
 
 (fact
+  (not-exists? "test/me/raynes/testfiles/foo") => false
+  (not-exists? "ewjgnr4ig43j") => true)
+
+(fact
+  (path-join "/a" "b") => "/a/b"
+  (path-join "/a" "b" "c") => "/a/b/c")
+
+(fact
   (let [f (io/file "test/me/raynes/testfiles/baz")]
     (.createNewFile f)
     (delete f)
@@ -118,6 +126,11 @@
   (base-name "foo/bar.txt" true) => "bar"
   (base-name "bar.txt" ".txt") => "bar"
   (base-name "foo/bar.txt" ".png") => "bar.txt")
+
+(fact
+  (dir-name "/foo/bar") => "/foo"
+  (dir-name "/foo/bar.txt") => "/foo"
+  (dir-name "/path/to/bar.txt") => "/path/to")
 
 (fact
   (let [tmp (temp-file "fs-")]
@@ -263,6 +276,19 @@
     "/path/to/fs"   ["fs" nil]
     ""              ["fs" nil]
     "~user/.bashrc" [".bashrc" nil])
+
+(tabular
+  (fact (adjust-ext ?file ?ext) => ?new)
+
+  ?file           ?ext   ?new
+  "fs.clj"        ".mp4" "fs.mp4"
+  "fs."           ".mp4" "fs.mp4"
+  "fs.clj.bak"    ".mp4" "fs.clj.mp4"
+  "/path/to/fs"   ".mp4" "/path/to/fs.mp4"
+  ""              ".mp4" ".mp4")
+
+
+
 
 (tabular
   (fact (extension ?file) => ?ext)
